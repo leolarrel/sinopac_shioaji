@@ -11,8 +11,8 @@ def main() :
     s.connect(("127.0.0.1", 44444))
 
     #request_cmd = "<buy or sell>&<contract>&<market or limit>&price&amount"
-    #request_cmd = "b&MTX&L&17903&1"
-    #request_cmd = "s&TX&M&&3"
+    #request_cmd = "b&M&L&17903&1" #buy MTX limit 17903 one contract
+    #request_cmd = "s&T&M&0&3" #sell TX market three contract
     request_cmd = f"{sys.argv[1]}&{sys.argv[2]}&{sys.argv[3]}&{sys.argv[4]}&{sys.argv[5]}"
 
     s.send(request_cmd.encode())

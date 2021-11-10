@@ -98,7 +98,7 @@ class sinopac_shioaji_api :
         raise ApiError
 
     def order(self, buysell, contract, market, price, position) :
-        logD(f"order(): {buysell}, {contract}, {market}, {price}, {position}")
+        logD(f"order(): {buysell},{contract},{market},{price},{position}")
 
         real_contract = self.verify_nearby_contract(contract)
 
@@ -179,9 +179,12 @@ def main() :
         server.serve_forever()
     except KeyboardInterrupt:
         logE(f"KeyboardInterrupt, exit.")
-        server.server_close()
-        api_obj.logout()
-        return 0;
+
+    logD(f"waiting all server thread stop...")
+    server.server_close()
+    logD(f"all server thread has stopped")
+    api_obj.logout()
+    return 0;
 
 if __name__ == "__main__" :
     exit(main())
