@@ -12,11 +12,11 @@ def log_init() :
     #logdatefmt = '%Y/%m/%d %H:%M:%S'
     #logging.basicConfig(level=logging.DEBUG, format=logfmt, datefmt=logdatefmt)
 
-    logfmt = '%(asctime)s-%(levelname)s-%(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=logfmt)
+    logfmt = '%(asctime)s <%(levelname)s> %(message)s'
+    logging.basicConfig(level=logging.INFO, format=logfmt)
 
     file_handler = logging.FileHandler('ocs.log')
-    file_format = logging.Formatter("%(asctime)s-%(levelname)s-%(message)s")
+    file_format = logging.Formatter("%(asctime)s <%(levelname)s> %(message)s")
     file_handler.setFormatter(file_format)
     file_handler.setLevel(logging.INFO)
 
@@ -55,16 +55,15 @@ class sinopac_shioaji_api :
             self.__api__.set_order_callback(self.order_callback)
 
         except Exception as e :
-            logE(f"{e}")
             raise ApiEerror("failed to init")
 
     def order_callback (self, stat, msg) :
         logD("order_callback")
-        logI(f'order event occur {dt.now()}\n{stat}\n{msg}\n')
+        logI(f'order event: {stat}\n{msg}\n')
 
     def login(self, arg_id, arg_passwd, arg_ca_path, arg_ca_passwd) :
+        logD("login()")
         try :
-            logD("login()")
             self.__api__.login(person_id = arg_id, \
                                passwd = arg_passwd, \
                                contracts_cb=print)
@@ -103,7 +102,8 @@ class sinopac_shioaji_api :
         raise ApiError
 
     def order(self, buysell, contract, market, price, position) :
-        logD(f"order(): {buysell},{contract},{market},{price},{position}")
+        logD(f"order()")
+        logI(f"order: {buysell},{contract},{market},{price},{position}")
 
         real_contract = self.verify_nearby_contract(contract)
 
@@ -143,6 +143,7 @@ class the_request_handler(socketserver.BaseRequestHandler) :
 
     def handle(self) :
         #cur = threading.current_thread()
+        logD('client connect')
 
         while True:
             request_cmd = self.request.recv(1024)
@@ -183,7 +184,9 @@ def main() :
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        logE(f"KeyboardInterrupt, exit.")
+        logI(f"KeyboardInterrupt, exit.")
+    except Exception as e :
+        logE(f"main except: {e}")
 
     logD(f"waiting all server thread stop...")
     server.server_close()
