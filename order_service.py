@@ -52,10 +52,15 @@ class sinopac_shioaji_api :
 
             self.simulate = True if simulate == "yes" else False
             self.__api__ = sj.Shioaji(simulation = self.simulate)
+            self.__api__.set_order_callback(self.order_callback)
 
         except Exception as e :
             logE(f"{e}")
             raise ApiEerror("failed to init")
+
+    def order_callback (self, stat, msg) :
+        logD("order_callback")
+        logI(f'order event occur {dt.now()}\n{stat}\n{msg}\n')
 
     def login(self, arg_id, arg_passwd, arg_ca_path, arg_ca_passwd) :
         try :
