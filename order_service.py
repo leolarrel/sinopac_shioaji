@@ -1,4 +1,5 @@
 import sys
+import time
 import json
 import configparser
 from datetime import datetime as dt
@@ -92,6 +93,12 @@ class sinopac_shioaji_api :
         logD("logout()")
         self.__api__.logout()
 
+    def relogin(self) :
+        logI("relogin")
+        self.logout()
+        time.sleep(5)
+        self.login()
+
     def verify_nearby_contract(self, contract) :
         temp = dt.now().timestamp()
         nearby_contract_name = ""
@@ -132,13 +139,17 @@ class the_request_handler(socketserver.BaseRequestHandler) :
     def the_command_process(self, command_str) :
         try :
             arg_list = command_str.split('&')
-            if len(arg_list) != 5 :
-                raise ValueError
+            if arg_list[0] == 'r' :
+                self.api_obj.relogin()
+            elif arg_list[0] == 'b' or arg_list[0] == 's' :
+                if len(arg_list) != 5 :
+                    raise ValueError
 
-            self.api_obj.order(arg_list[0],
-                    arg_list[1], arg_list[2],
-                    arg_list[3], arg_list[4])
-
+                self.api_obj.order(arg_list[0],
+                                   arg_list[1],
+                                   arg_list[2],
+                                   arg_list[3],
+                                   arg_list[4])
             return "ok"
 
         except (ApiError, ValueError) :
