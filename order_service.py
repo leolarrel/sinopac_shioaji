@@ -42,20 +42,22 @@ class sinopac_shioaji_api :
         logD("__init__()")
 
         try :
-            with open("nearby_contract.json", "r") as f:
-                temp = json.load(f)
-
-            self.__nearby_contract_list__ = temp["nearby_contract_record"]
-            for i in self.__nearby_contract_list__ :
-                temp = dt.strptime(i["delivery"], "%Y/%m/%d %H:%M:%S")
-                i["timestamp"] = int(temp.timestamp())
-
+            self.nearby_contract_info()
             self.simulate = True if simulate == "yes" else False
             self.__api__ = sj.Shioaji(simulation = self.simulate)
             self.__api__.set_order_callback(self.order_callback)
 
         except Exception as e :
             raise ApiEerror("failed to init")
+
+    def nearby_contract_info(self) :
+        with open("nearby_contract.json", "r") as f:
+            temp = json.load(f)
+
+        self.__nearby_contract_list__ = temp["nearby_contract_record"]
+        for i in self.__nearby_contract_list__ :
+            temp = dt.strptime(i["delivery"], "%Y/%m/%d %H:%M:%S")
+            i["timestamp"] = int(temp.timestamp())
 
     def order_callback (self, stat, msg) :
         logD("order_callback")
