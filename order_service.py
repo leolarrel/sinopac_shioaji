@@ -47,6 +47,11 @@ class sinopac_shioaji_api :
             self.__api__ = sj.Shioaji(simulation = self.simulate)
             self.__api__.set_order_callback(self.order_callback)
 
+            self.account_id = None
+            self.account_passwd = None
+            self.account_ca_path = None
+            self.account_ca_passwd = None
+
         except Exception as e :
             raise ApiEerror("failed to init")
 
@@ -63,16 +68,16 @@ class sinopac_shioaji_api :
         logD("order_callback")
         logI(f'order event: {stat}\n{msg}\n')
 
-    def login(self, arg_id, arg_passwd, arg_ca_path, arg_ca_passwd) :
+    def login(self) :
         logD("login()")
         try :
-            self.__api__.login(person_id = arg_id, \
-                               passwd = arg_passwd, \
+            self.__api__.login(person_id = self.account_id, \
+                               passwd = self.account_passwd, \
                                contracts_cb=print)
             if self.simulate == False :
-                self.__api__.activate_ca(ca_path = arg_ca_path, \
-                                         ca_passwd = arg_ca_passwd, \
-                                         person_id = arg_id)
+                self.__api__.activate_ca(ca_path = self.account_ca_path, \
+                                         ca_passwd = self.account_ca_passwd, \
+                                         person_id = self.account_id)
 
             #you can iter api.Contracts object to know contracts info
             #MXFR<1,2> is small TXF, TXFR<1,2> is big TXF
@@ -172,10 +177,12 @@ def main() :
         ini_setting.read("setting.ini")
 
         api_obj = sinopac_shioaji_api(ini_setting["global"]["simulation"])
-        api_obj.login(ini_setting["global"]["id"], \
-                      ini_setting["global"]["password"], \
-                      ini_setting["global"]["ca_file"], \
-                      ini_setting["global"]["ca_password"])
+        api_obj.account_id = ini_setting["global"]["id"]
+        api_obj.account_passwd = ini_setting["global"]["password"]
+        api_obj.account_ca_path = ini_setting["global"]["ca_file"]
+        api_obj.account_ca_passwd = ini_setting["global"]["ca_password"]
+        api_obj.login()
+
     except :
         logE(f"failed to create and login sinopac shioaji api. abort")
         return -1
