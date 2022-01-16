@@ -22,7 +22,7 @@ def send_relogin_command() :
 
 def main() :
     sleep_time = 1 * 60
-    relogin_start = '05:30:00'
+    relogin_start = '07:20:00'
     relogin_interval = (2 * 60 * 60)
     flag = False
 
