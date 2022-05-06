@@ -67,7 +67,12 @@ class sinopac_shioaji_api :
 
     def order_callback (self, stat, msg) :
         logD("order_callback")
-        logI(f'order event: {stat}\n{msg}\n')
+        if stat == sj.constant.OrderState.FOrder :
+            op_type = msg["operation"]["op_type"]
+            logI(f"Order: {op_type}")
+        elif stat == sj.constant.OrderState.FDeal :
+            logI(f'Deal\n{msg}')
+
 
     def login(self) :
         logD("login()")
