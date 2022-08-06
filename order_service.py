@@ -55,6 +55,8 @@ class sinopac_shioaji_api :
             self.account_ca_path = None
             self.account_ca_passwd = None
 
+            self.api_lock = threading.Lock()
+
         except Exception as e :
             raise ApiEerror("failed to init")
 
@@ -145,6 +147,7 @@ class sinopac_shioaji_api :
 
         real_contract = self.__get_nearby_future_contract__(contract)
 
+        self.api_lock.acquire()
         order = self.__api__.Order( \
                 action = sj.constant.Action.Buy if buysell == 'b' else sj.constant.Action.Sell, \
                 price = int(price.strip()), \
@@ -155,6 +158,8 @@ class sinopac_shioaji_api :
                 account = self.__api__.futopt_account)
 
         trade = self.__api__.place_order(real_contract, order)
+        self.api_lock.release()
+
         if trade.status.status == sj.constant.Status.Failed :
             raise OrderContractError(f"failed to order. status code: {trade.status.status_code}")
 
@@ -216,6 +221,7 @@ class sinopac_shioaji_api :
 
         real_contract = self.__get_nearby_options_contract__(contract, call_put, contract_price)
 
+        self.api_lock.acquire()
         order = self.__api__.Order( \
                 action = sj.constant.Action.Buy if buysell == 'b' else sj.constant.Action.Sell, \
                 price = int(price.strip()), \
@@ -226,6 +232,8 @@ class sinopac_shioaji_api :
                 account = self.__api__.futopt_account)
 
         trade = self.__api__.place_order(real_contract, order)
+        self.api_lock.release()
+
         if trade.status.status == sj.constant.Status.Failed :
             raise OrderContractError(f"failed to order. status code: {trade.status.status_code}")
 
