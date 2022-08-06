@@ -17,13 +17,13 @@ def main() :
         request_cmd = "r&"
     else :
         #futures:
-        #request_cmd = "<buy or sell>&<contract>&<market or limit>&price&amount"
-        #request_cmd = "b&MXF&L&17903&1" #buy MXF limit 17903 one contract
-        #request_cmd = "s&TXF&M&0&3" #sell TXF market three contract
+        #request_cmd = "<future>&<buy or sell>&<contract>&<market or limit>&price&amount"
+        #request_cmd = "f&b&MXF&L&17903&1" #buy MXF limit 17903 one contract
+        #request_cmd = "f&s&TXF&M&0&3" #sell TXF market three contract
         #Options:
-        #request_cmd = "<buy or sell>&<contract>&<contract_price>&<call or put>&<market or limit>&price&amount"
-        #request_cmd = "b&TXF&14500&C&L&45.0&1" #buy TXF 14500 call limit 45.0 one contract
-        #request_cmd = "s&TXF&12000&P&M&0&3" #sell TXF 12000 put market three contract
+        #request_cmd = "<option>&<buy or sell>&<contract>&<contract_price>&<call or put>&<market or limit>&price&amount"
+        #request_cmd = "o&b&TX&14500&C&L&45.0&1" #buy TXF 14500Call limit 45.0 one contract
+        #request_cmd = "o&s&TX&12000&P&M&0&3" #sell TXF 12000Put market three contract
 
         __temp = sys.argv[1:]
         for i in __temp :
