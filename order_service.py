@@ -45,20 +45,19 @@ class sinopac_shioaji_api :
     def __init__ (self, simulate) :
         logD("__init__()")
 
+        self.simulate = True if simulate == "yes" else False
         try :
-            self.simulate = True if simulate == "yes" else False
             self.__api__ = sj.Shioaji(simulation = self.simulate)
-            self.__api__.set_order_callback(self.order_callback)
-
-            self.account_id = None
-            self.account_passwd = None
-            self.account_ca_path = None
-            self.account_ca_passwd = None
-
-            self.api_lock = threading.Lock()
-
         except Exception as e :
             raise ApiEerror("failed to init")
+
+        self.__api__.set_order_callback(self.order_callback)
+
+        self.account_id = None
+        self.account_passwd = None
+        self.account_ca_path = None
+        self.account_ca_passwd = None
+        self.api_lock = threading.Lock()
 
     def order_callback (self, stat, msg) :
         logD("order_callback")
@@ -67,7 +66,6 @@ class sinopac_shioaji_api :
             logI(f"Order: {op_type}")
         elif stat == sj.constant.OrderState.FDeal :
             logI(f'Deal\n{msg}')
-
 
     def login(self) :
         logD("login()")
@@ -80,14 +78,14 @@ class sinopac_shioaji_api :
                                          ca_passwd = self.account_ca_passwd, \
                                          person_id = self.account_id)
 
-            #you can iter api.Contracts object to know contracts info
-            #MXFR<1,2> is small TXF, TXFR<1,2> is big TXF
-            #for i in self.__api__.Contracts.Futures :
-            #    for j in i:
-            #        print(j)
-
         except :
             raise ApiError("failed to login")
+
+        #you can for loop api.Contracts object to know contracts info
+        #MXFR<1,2> is small TXF, TXFR<1,2> is big TXF
+        #for i in self.__api__.Contracts.Futures :
+        #    for j in i:
+        #        print(j)
 
     def logout(self) :
         logD("logout()")
