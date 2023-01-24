@@ -57,6 +57,8 @@ class sinopac_shioaji_api :
         self.account_passwd = None
         self.account_ca_path = None
         self.account_ca_passwd = None
+        self.account_akey = None
+        self.account_skey = None
         self.api_lock = threading.Lock()
 
     def order_callback (self, stat, msg) :
@@ -70,12 +72,12 @@ class sinopac_shioaji_api :
     def login(self) :
         logD("login()")
         try :
-            self.__api__.login(person_id = self.account_id, \
-                               passwd = self.account_passwd, \
-                               contracts_cb=print)
+            self.__api__.login(api_key = self.account_akey,
+                               secret_key = self.account_skey,
+                               contracts_cb = print)
             if self.simulate == False :
-                self.__api__.activate_ca(ca_path = self.account_ca_path, \
-                                         ca_passwd = self.account_ca_passwd, \
+                self.__api__.activate_ca(ca_path = self.account_ca_path,
+                                         ca_passwd = self.account_ca_passwd,
                                          person_id = self.account_id)
 
         except :
@@ -314,6 +316,8 @@ def main() :
         api_obj.account_passwd = ini_setting["global"]["password"]
         api_obj.account_ca_path = ini_setting["global"]["ca_file"]
         api_obj.account_ca_passwd = ini_setting["global"]["ca_password"]
+        api_obj.account_akey = ini_setting["global"]["api_key"]
+        api_obj.account_skey = ini_setting["global"]["secret_key"]
         api_obj.login()
 
     except Exception as e :
