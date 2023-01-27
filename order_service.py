@@ -148,14 +148,13 @@ class sinopac_shioaji_api :
         real_contract = self.__get_nearby_future_contract__(contract)
 
         self.api_lock.acquire()
-        order = self.__api__.Order( \
-                action = sj.constant.Action.Buy if buysell == 'b' else sj.constant.Action.Sell, \
-                price = int(price.strip()), \
-                quantity = position, \
-                price_type = sj.constant.FuturesPriceType.MKP if market == 'M' else sj.constant.FuturesPriceType.LMT, \
-                order_type = sj.constant.FuturesOrderType.IOC if market == 'M' else sj.constant.FuturesOrderType.ROD, \
-                octype = sj.constant.FuturesOCType.Auto, \
-                account = self.__api__.futopt_account)
+        order = self.__api__.Order(action = "Buy" if buysell == 'b' else "Sell",
+                                   price = int(price.strip()),
+                                   quantity = position,
+                                   price_type = "MKP" if market == 'M' else "LMT",
+                                   order_type = "IOC" if market == 'M' else "ROD",
+                                   octype = "Auto",
+                                   account = self.__api__.futopt_account)
 
         trade = self.__api__.place_order(real_contract, order)
         self.api_lock.release()
@@ -222,14 +221,13 @@ class sinopac_shioaji_api :
         real_contract = self.__get_nearby_options_contract__(contract, call_put, contract_price)
 
         self.api_lock.acquire()
-        order = self.__api__.Order( \
-                action = sj.constant.Action.Buy if buysell == 'b' else sj.constant.Action.Sell, \
-                price = int(price.strip()), \
-                quantity = position, \
-                price_type = sj.constant.FuturesPriceType.MKP if market == 'M' else sj.constant.FuturesPriceType.LMT, \
-                order_type = sj.constant.FuturesOrderType.IOC if market == 'M' else sj.constant.FuturesOrderType.ROD, \
-                octype = sj.constant.FuturesOCType.Auto, \
-                account = self.__api__.futopt_account)
+        order = self.__api__.Order(action = "Buy" if buysell == 'b' else "Sell",
+                                   price = int(price.strip()),
+                                   quantity = position,
+                                   price_type = "MKP" if market == 'M' else "LMT",
+                                   order_type = "IOC" if market == 'M' else "ROD",
+                                   octype = "Auto",
+                                   account = self.__api__.futopt_account)
 
         trade = self.__api__.place_order(real_contract, order)
         self.api_lock.release()
