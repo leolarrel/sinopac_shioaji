@@ -59,6 +59,13 @@ class sinopac_shioaji_api :
         self.account_ca_passwd = None
         self.account_akey = None
         self.account_skey = None
+
+        self.contract_fetch_O = False
+        self.contract_fetch_I = False
+        self.contract_fetch_S = False
+        self.contract_fetch_F = False
+        self.__future_contract_db__ = {}
+
         self.api_lock = threading.Lock()
 
     def order_callback (self, stat, msg) :
@@ -69,12 +76,42 @@ class sinopac_shioaji_api :
         elif stat == sj.constant.OrderState.FuturesDeal :
             logI(f'Deal: {msg}')
 
+    def rebuild_contract_db(self, a) :
+        #you can for loop api.Contracts object to know contracts info
+        #MXFR<1,2> is small TXF, TXFR<1,2> is big TXF
+        #for i in self.__api__.Contracts.Futures :
+        #    for j in i:
+        #        print(j)
+
+        b = str(a)
+
+        if "Index" in b:
+            self.contract_fetch_I = True
+        elif "Stock" in b:
+            self.contract_fetch_S = True
+        elif "Future" in b :
+            self.contract_fetch_F = True
+        elif "Option" in b:
+            self.contract_fetch_O = True
+
+        if not (self.contract_fetch_I == True and
+            self.contract_fetch_S == True and
+            self.contract_fetch_F == True and
+            self.contract_fetch_O == True) :
+            return
+
+        logI("rebuild_contract_db(): build future database")
+        for i in self.__api__.Contracts.Futures :
+            l = [j for j in i if j.code[-2:] not in ["R1", "R2"]]
+            l.sort(key=lambda t: t.delivery_date)
+            self.__future_contract_db__[l[0].category] = l
+
     def login(self) :
         logD("login()")
         try :
             self.__api__.login(api_key = self.account_akey,
                                secret_key = self.account_skey,
-                               contracts_cb = print)
+                               contracts_cb = self.rebuild_contract_db)
             if self.simulate == False :
                 self.__api__.activate_ca(ca_path = self.account_ca_path,
                                          ca_passwd = self.account_ca_passwd,
@@ -83,15 +120,14 @@ class sinopac_shioaji_api :
         except :
             raise ApiError("failed to login")
 
-        #you can for loop api.Contracts object to know contracts info
-        #MXFR<1,2> is small TXF, TXFR<1,2> is big TXF
-        #for i in self.__api__.Contracts.Futures :
-        #    for j in i:
-        #        print(j)
-
     def logout(self) :
         logD("logout()")
         self.__api__.logout()
+        self.contract_fetch_O = False
+        self.contract_fetch_I = False
+        self.contract_fetch_S = False
+        self.contract_fetch_F = False
+        self.__future_contract_db__ = {}
 
     def relogin(self) :
         logI("relogin")
@@ -106,6 +142,23 @@ class sinopac_shioaji_api :
             __category = 'MXF'
         else :
             __category = category
+
+        if __category in self.__future_contract_db__ :
+            __found = None
+            for i in self.__future_contract_db__[__category] :
+                __time_dt = dt.strptime(f"{i.delivery_date} 13:29:00",
+                                        "%Y/%m/%d %H:%M:%S")
+                __now = dt.today()
+                if __now >= __time_dt :
+                    continue
+                else :
+                    __found = i
+                    break
+
+            if __found != None :
+                return __found
+
+        logE('This message should never be displayed. If you see this message, please debug')
 
         __flist = {}
         for f in self.__api__.Contracts.Futures :
