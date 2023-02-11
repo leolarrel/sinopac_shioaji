@@ -65,6 +65,8 @@ class sinopac_shioaji_api :
         self.contract_fetch_S = False
         self.contract_fetch_F = False
         self.__future_contract_db__ = {}
+        self.__option_contract_db__ = {}
+        self.__tx_option_delivery__ = None
 
         self.api_lock = threading.Lock()
 
@@ -106,6 +108,29 @@ class sinopac_shioaji_api :
             l.sort(key=lambda t: t.delivery_date)
             self.__future_contract_db__[l[0].category] = l
 
+        logI("rebuild_contract_db(): build option database")
+        __dict1 = {}
+        for n in self.__api__.Contracts.Options :
+            #__category = str(n)[0:3]
+            __delivery_date = {t.delivery_date for t in n}
+
+            __dict2 = {}
+            for nn in __delivery_date :
+                __lst = [t for t in n if t.delivery_date == nn]
+                if len(__lst) == 0 :
+                    continue
+
+                __lst.sort(key=lambda t: t.symbol)
+                __dict2[dt.strptime(f"{nn} 13:29:00", "%Y/%m/%d %H:%M:%S")] = tuple(__lst)
+                __category = __lst[0].category
+
+            self.__option_contract_db__[__category] = __dict2
+            if "TX" in __category :
+                temp = sorted(__delivery_date)
+                __dict1[dt.strptime(f"{temp[0]} 13:29:00", "%Y/%m/%d %H:%M:%S")] = __category
+
+        self.__tx_option_delivery__ = tuple(sorted(__dict1.items()))
+
     def login(self) :
         logD("login()")
         try :
@@ -128,6 +153,8 @@ class sinopac_shioaji_api :
         self.contract_fetch_S = False
         self.contract_fetch_F = False
         self.__future_contract_db__ = {}
+        self.__option_contract_db__ = {}
+        self.__tx_option_delivery__ = None
 
     def relogin(self) :
         logI("relogin")
@@ -215,7 +242,53 @@ class sinopac_shioaji_api :
         if trade.status.status == sj.constant.Status.Failed :
             raise OrderContractError(f"failed to order. status code: {trade.status.status_code}")
 
+    def __bisect_search_options_contract__(self, __option_tuple, symbol) :
+        low = 0
+        high = len(__option_tuple) - 1
+        mid = 0
+        mid_element= None
+
+        while low <= high :
+            mid = (high + low) // 2
+            mid_element = __option_tuple[mid]
+
+            if mid_element.symbol == symbol :
+                return mid_element
+            elif mid_element.symbol > symbol :
+                high = mid - 1
+            elif mid_element.symbol < symbol :
+                low = mid + 1
+
+        return None
+
     def __get_nearby_options_contract__(self, category, call_put, step) :
+        __category = category
+        __now_time = dt.today()
+
+        if category == "TX" :
+            for i in self.__tx_option_delivery__ :
+                if __now_time < i[0] :
+                    __category = i[1]
+                    break
+
+        if __category not in self.__option_contract_db__.keys() :
+            raise OrderContractError(f"found not any category name is match '{__category}'")
+
+        __lst = list(self.__option_contract_db__[__category].keys())
+        __lst.sort()
+        for __delivery_date in __lst :
+            if __now_time < __delivery_date :
+                break
+
+        __symbol = f"{__category}{__delivery_date.strftime('%Y%m')}{step.zfill(5)}{call_put}"
+
+        __options = self.__option_contract_db__[__category][__delivery_date]
+        __found = self.__bisect_search_options_contract__(__options, __symbol)
+        if __found != None :
+            return __found
+
+        logE('found not option contract, use for loop to try again')
+
         __odict = {}
         __temp_dict = {}
         for o in self.__api__.Contracts.Options :
@@ -268,7 +341,7 @@ class sinopac_shioaji_api :
         logI(f"order_options() {buysell},{contract},{contract_price},{call_put},{market},{price},{position}")
 
         #current we just support TX contract.
-        if contract != "TX" :
+        if "TX" not in contract :
             raise OrderContractError("current we just support TX contract")
 
         real_contract = self.__get_nearby_options_contract__(contract, call_put, contract_price)
