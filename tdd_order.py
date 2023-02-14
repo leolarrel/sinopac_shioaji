@@ -1,5 +1,5 @@
 import sys
-import socket
+import zmq
 import time
 
 def main() :
@@ -7,14 +7,18 @@ def main() :
         print("Usage:\n\ttdd_order.py f <b|s> <contract> <M|L> <price> <amount>")
         print("Usage:\n\ttdd_order.py o <b|s> <contract> <contract_price> <C|P> <M|L> <price> <amount>")
         print("Usage:\n\ttdd_order.py r")
+        print("Usage:\n\ttdd_order.py e")
         return -1
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect(("127.0.0.1", 44444))
+    context = zmq.Context()
+    sender = context.socket(zmq.PUSH)
+    sender.connect("tcp://127.0.0.1:44444")
 
     request_cmd = ""
     if sys.argv[1] == "r" :
         request_cmd = "r&"
+    elif sys.argv[1] == "e" :
+        request_cmd = "e&"
     else :
         #futures:
         #request_cmd = "<future>&<buy or sell>&<contract>&<market or limit>&price&amount"
@@ -29,13 +33,10 @@ def main() :
         for i in __temp :
             request_cmd += f"{i}&"
         request_cmd = request_cmd[:-1]
-        print(request_cmd)
+        print(f"<{request_cmd}>")
 
-    s.send(request_cmd.encode())
-    result = s.recv(8)
-    print(f"result: {result.decode()}");
-
-    s.close()
+    sender.send_string(request_cmd)
+    sender.close()
 
 if __name__ == '__main__':
     sys.exit(main())

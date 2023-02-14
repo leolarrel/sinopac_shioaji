@@ -6,6 +6,7 @@ from datetime import datetime as dt
 import logging
 import socketserver
 import threading
+import zmq
 import shioaji as sj
 
 def log_init() :
@@ -361,77 +362,56 @@ class sinopac_shioaji_api :
         if trade.status.status == sj.constant.Status.Failed :
             raise OrderContractError(f"failed to order. status code: {trade.status.status_code}")
 
-class the_request_handler(socketserver.BaseRequestHandler) :
-    def remote_command_process(self, command_str) :
-        ret = "ok"
-        try :
-            arg_list = command_str.split('&')
-            if arg_list[0] == 'r' :
-                self.api_obj.relogin()
-
-            elif arg_list[0] == 'f' : #futures
-                if len(arg_list) != 6 :
-                    raise TypeError("The number of arguments for ordering Future is incorrect")
-
-                self.api_obj.order_futures(arg_list[1],
-                                           arg_list[2],
-                                           arg_list[3],
-                                           arg_list[4],
-                                           arg_list[5])
-
-            elif arg_list[0] == 'o' : #Options
-                if len(arg_list) != 8 :
-                    raise TypeError("The number of arguments for ordering Option is incorrect")
-
-                self.api_obj.order_options(arg_list[1],
-                                           arg_list[2],
-                                           arg_list[3],
-                                           arg_list[4],
-                                           arg_list[5],
-                                           arg_list[6],
-                                           arg_list[7])
-
-#            elif arg_list[0] == 's' : #stocks
-#                ret = "error"
-            else :
-                raise TypeError("Not support")
-
-
-        except Exception as e :
-            logE(f"remote_command_process(): {type(e).__name__}: {e}")
-            ret = "error"
-
-        return ret
-
-    def setup (self) :
-        global api_obj
-        self.api_obj = api_obj
-
-    def handle(self) :
-        #cur = threading.current_thread()
-        logD('client connect')
-
-        while True:
-            request_cmd = self.request.recv(1024)
-
-            if len(request_cmd) == 0 :
-                logD('client closed connection.')
-                self.request.close()
-                break
-
-            result = self.remote_command_process(request_cmd.decode())
-            self.request.send(result.encode())
-
-class the_server(socketserver.ThreadingMixIn, socketserver.TCPServer) :
-    pass
-
 api_obj = None
+def command_execute(command_str) :
+    global api_obj
+
+    try :
+        arg_list = command_str.split('&')
+        if arg_list[0] == 'e' :
+            return False
+
+        if arg_list[0] == 'r' :
+            api_obj.relogin()
+
+        elif arg_list[0] == 'f' : #futures
+            if len(arg_list) != 6 :
+                raise TypeError("The number of arguments for ordering Future is incorrect")
+
+            api_obj.order_futures(arg_list[1],
+                                  arg_list[2],
+                                  arg_list[3],
+                                  arg_list[4],
+                                  arg_list[5])
+
+        elif arg_list[0] == 'o' : #Options
+            if len(arg_list) != 8 :
+                raise TypeError("The number of arguments for ordering Option is incorrect")
+
+            api_obj.order_options(arg_list[1],
+                                  arg_list[2],
+                                  arg_list[3],
+                                  arg_list[4],
+                                  arg_list[5],
+                                  arg_list[6],
+                                  arg_list[7])
+
+        #elif arg_list[0] == 's' : #stocks
+        #   pass
+        else :
+            raise TypeError("Not support")
+
+    except Exception as e :
+        logE(f"command_execute(): {type(e).__name__}: {e}")
+
+    return True
+
 def main() :
     global api_obj
 
     log_init()
 
-    try:
+    try :
         ini_setting = configparser.ConfigParser()
         ini_setting.read("setting.ini")
 
@@ -444,25 +424,36 @@ def main() :
         api_obj.account_skey = ini_setting["global"]["secret_key"]
         api_obj.login()
 
+        logI(f"ZMQ pull socket bind at: tcp://*:44444")
+        zmq_ctx = zmq.Context()
+        zmq_poller = zmq.Poller()
+        recv_s = zmq_ctx.socket(zmq.PULL)
+        recv_s.bind("tcp://*:44444")
+        zmq_poller.register(recv_s, zmq.POLLIN)
+
     except Exception as e :
         logE(f"main(): {type(e).__name__}: {e}: program abort.")
         return -1
 
-    server = the_server(("", 44444), the_request_handler)
-    logI(f"server start at: {server.server_address}")
+    run = True
+    while run == True :
+        try :
+            sock_dict = dict(zmq_poller.poll(1000))
+            if recv_s in sock_dict and sock_dict[recv_s] == zmq.POLLIN:
+                run = command_execute(recv_s.recv_string())
 
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt :
-        logI(f"main(): KeyboardInterrupt, program quit.")
-    except Exception as e :
-        logE(f"main(): {type(e).__name__}: {e}: program abort.")
+        except Exception as e :
+            logE(f"main(): {type(e).__name__}: {e}: program abort.")
+            run = False
 
-    logD(f"waiting all server thread stop...")
-    server.server_close()
-    logD(f"all server thread has stopped")
+        except KeyboardInterrupt as e:
+            logI(f"main(): KeyboardInterrupt, program quit.")
+            run = False
+
     api_obj.logout()
-    return 0;
+    recv_s.close()
+    zmq_ctx.term()
+    return 0
 
 if __name__ == "__main__" :
     exit(main())

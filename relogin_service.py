@@ -1,29 +1,16 @@
 import sys
-import socket
+import zmq
 import time
 import datetime as dt
 
 def send_relogin_command() :
-    ret = False
-    try :
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(("127.0.0.1", 44444))
+    context = zmq.Context()
+    sender = context.socket(zmq.PUSH)
+    sender.connect("tcp://127.0.0.1:44444")
 
-        request_cmd = "r&"
-        s.send(request_cmd.encode())
-        result = s.recv(8)
-
-        s.close()
-
-    except ConnectionRefusedError as e :
-        print(e)
-        result = b'failed'
-
-    if result == b'ok' :
-        ret = True
-
-    print(f"send relogin: result: {ret}: {result.decode()}");
-    return ret
+    request_cmd = "r&"
+    sender.send_string(request_cmd)
+    sender.close()
 
 def main() :
     sleep_time = (3 * 60)
